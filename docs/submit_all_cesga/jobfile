@@ -1,0 +1,45 @@
+#!/bin/bash
+#$ -l num_proc=1,s_rt=24:00:00,s_vmem=2G,h_fsize=2G
+#$ -pe mpi 16
+#-----------------------------------------
+# to run use:  qsub -l num_proc=1,s_rt=24:00:00,s_vmem=2G,h_fsize=2G -pe mpi 16 run.pbs
+#------------------------------------------
+module load sge/62 icc/9.1.052 ifort/9.1.052 mkl/9.1 hp-mpi
+
+EXEC=/home/csic/eem/jwo/vaspCesga/bin/vasp.4.6.28-nc-p
+
+rm -f nodes ; cat $TMPDIR/machines > nodes
+numproc=`cat ./nodes | wc -l`
+
+cp ../INCAR.nc ./INCAR
+cp ../KPOINTS ./KPOINTS
+ln ../POTCAR ./POTCAR
+cp ../CHGCAR.nc ./CHGCAR
+
+/opt/hpmpi/bin/mpirun.mpich -np $numproc -hostfile $TMPDIR/machines ${EXEC} > vasp.out
+
+mv CHGCAR CHGCAR_nc
+gzip CHGCAR_nc
+gzip OUTCAR
+rm CHG WAVECAR PROCAR vasprun.xml
+
+EXEC=/home/csic/eem/jwo/vaspCesga/bin/vasp.4.6.28-p
+
+cp ../INCAR.berry ./INCAR
+cp ../CHGCAR ./CHGCAR
+
+/opt/hpmpi/bin/mpirun.mpich -np $numproc -hostfile $TMPDIR/machines ${EXEC} >> vasp.out
+
+for dir in 1 2 3 ; do
+  cp ../INCAR.berry ./INCAR
+  echo "LBERRY = .TRUE." >> ./INCAR
+  echo "IGPAR  = $dir" >> ./INCAR
+  echo "NPPSTR = 15" >> ./INCAR
+
+  /opt/hpmpi/bin/mpirun.mpich -np $numproc -hostfile $TMPDIR/machines ${EXEC} >> vasp.out
+
+  mv OUTCAR OUTCAR_berry_$dir
+  gzip OUTCAR_berry_$dir
+
+  rm CHG CHGCAR WAVECAR PROCAR vasprun.xml
+done

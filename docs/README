@@ -1,0 +1,260 @@
+===================================================================================================
+ME coupling HOWTO
+===================================================================================================
+Author: Jacek C. Wojdel
+Mail:   jcwojdel@icmab.es
+Date:   28.07.2009
+===================================================================================================
+
+0. INTRODUCTION AND PREREQUISITIES
+
+The METoolbox set of python programs allows for calculation of the following physical properties:
+
+- Gamma-point phonons
+- elastic constant tensors
+- Born charges
+- piezoelectric tensors
+- electric susceptibility tensor 
+- piezomagnetic tensors
+- lattice mediated magnetic susceptibility tensor
+- magneto-electric coupling tensor
+
+General workflow for getting the above attributes is as follows:
+
+1) Find the groundstate of the system
+2) Generate slightly perturbed POSCARs from the groundstate CONTCAR (generate_poscars.py)
+3) Run all the necessary calculations for all of the generated POSCARs
+  a. Single point energy, forces and stress evaluation:
+     needed for all calculations
+  b. Three Berry phase calculations for each integration direction:
+  	 needed for calculations from Born charges and further
+  c. Single point non-colinear magnetic state evaluation:
+  	 needed for calculations from piezomagnetic tensors and further
+  	 note that this calculation supercedes (a), so you need to do only one of them
+4) Run relevant programs on the directory containing subdirectories with all calculations from step 3.
+  - elastic constants - elastic.py
+  - Born charges, piezoelectric, electric susceptibility tensors - piezo.py
+  - piezomagnetic, electric susceptibility tensors - piezom.py
+  - magneto-electric coupling tensor - me_coupling.py
+
+In order to use METoolbox you need:
+
+- python 2.5 or newer
+- numPy 1.2 or newer (Numerical Python)
+- VASP 4.6 or newer
+- VASP compiled for noncolinear magnetism for magnetic response calculations
+- lot's of CPU time 
+
+1. GENERAL REMARKS ON COMPUTATIONAL DETAILS
+
+Initial geometry for the studied system can come from any type of VASP calculation, or even from the 
+crystallographic data. METoolbox does not rely on the structure being an equilibrium one, but of course
+the quality of results will depend on it strongly.
+
+For calculations of Born charges, one does not need to care much about the accuracy of the calculations;
+general rules for VASP calculations apply here.
+
+For calculations of anything related to the elastic constants, the geometry should be optimised very well,
+as should the energy. Note that the convergence of the calculated stress tensor is much slower than the
+convergence of forces, positions, and energies. Therefore a high energy cutoff and good k-point sampling
+is needed.
+
+Experience shows that all Berry-phase calculations can be done at colinear level, even if the system 
+itself exhibits important physics at spin-orbit coupling level. METoolbox copes with mixing both colinear
+and noncolinear calculations in the same calculation set, so this is an advisable optimisation of the 
+computational load.
+
+For the magnetic response calculations, one needs to be aware of the fact that noncolinear magnetism 
+converges extremely slowly. Tiny differences in spin-canting are stabilised only at EDIFF=1e-7, and for
+some systems even at EDIFF=1e-9 level of convergence. It extremely important to start each calculation 
+from the same guess of the magnetic state, and just specifying MAGMOM is usually not enough. Typically, 
+this can be achieved by starting from the same WAVECAR obtained from the groundstate calculation. 
+Otherwise (if storing WAVECAR is impossible), one can use ICHARG=1 and restart from the same CHGCAR. In 
+this case, it is crucial to allow for a long non-selfconsistent run at the beginning of calculation, so
+that all randomness of the initial wavefunction is smoothed out (NELMDL=15 or more).
+
+Things _will_ go wrong. In a compound with 10 atoms in the unit cell, one has to run more than 300 
+calculations. So at least some of them are likely to fail. Be sure to check that the restarts were done 
+with the same setting as the rest of the runs, CHGCARs were not overwritten, parameters changed etc.
+
+2. GENERATING POSCARS
+
+Once we have the groundstate geometry, we can use generate_poscars.py to populate the current directory 
+with subdirectories containing perturbed POSCAR files. A typical run looks like this:
+
+$ generate_poscars.py CONTCAR 0.005 0.02                                                                                               
+calc_00_0                                                                                                 
+calc_01_+1                                                                                                
+calc_01_-1                                                                                                
+calc_01_+2                                                                                                
+(...)
+calc_04_-2
+calc_04_+3
+calc_04_-3
+calc_00_a+X
+calc_00_a-X
+calc_00_a+Y
+(...)
+calc_00_c+Z
+calc_00_c-Z
+
+generate_poscars.py prepared directories calc_ATOMNUM_[+/-]DIRECTION with POSCARS containing specific 
+atom moved by 0.005 angstrom in both directions along x,y,z (1,2,3) Cartesian axes, and 
+calc_AXISNAME[+/-]DIRECTION with lattice distortions in which given axis was moved by 0.02 angstrom in
+both ways of each Cartesion direction.
+
+generate_poscars.py takes three parameters:
+
+- name of the input file (usually POSCAR or CONTCAR)
+- ionic displacement in angstroms
+- axis vector displacement in angstroms
+
+both of the displacement parameters can be specified as a triplet of numbers, allowing for nonhomogeneous 
+displacements, e.g.:
+
+$ generate_poscars.py CONTCAR "0.005 0.001 0.002" "0.01 0.02 0.05"
+
+Note the quotation marks around each triplet. This may be especially useful for unit cell distortions of
+a system which is significantly elongated along one of the directions. In case one wants to generate only
+ionic (axis) displacements, the other parameter can be set to 0:
+
+$ generate_poscars.py CONTCAR 0 0.01
+
+will generate only unit-cell axis distortions.
+
+Note that the naming convention is not crucial for proper working of the METoolbox. One can change the 
+directory names almost arbitrarily. Also, the displacement directions can be different, even 
+inhomogeneous, as long as they span the whole space of possible distortions. The set of distortions 
+generated by generate_poscars.py is overcomplete (contains movement in + and - directions) for the sake
+of computational stability. However, for quick and dirty calculations, one could use just the half of 
+generated POSCARs (e.g. the + direction and calc_00_0 = groundstate). The only thing that is needed is 
+that the ionic and unit cell distortions are kept separate and can be distinguished by name. The naming
+convention generated by this program is used for for separating ionic and unit cell distortions in all 
+other programs of the package, but it can be quickly changed; see the following lines of code:
+
+cs=calculation_set.read_directory(directory, saxis, usecache)
+cs.set_ionic('.*/calc_.._.*[0123]')
+cs.set_lattice('.*/calc_00_...')
+cs.set_groundstate('.*/calc_00_0')
+
+
+3. RUNNING ALL CALCULATIONS
+
+The subdirectories containing POSCARS should be copied to the machine on which the calculations are run. 
+Of course, running all of them by hand, copying appropriate INCARs, POTCARs, KPOINT files would be a 
+daunting task, so it's better to prepare some scripts doing this automatically. One example set of scripts
+like this for CESGA's Finis Terrae is included in this directory.
+
+Note that in the end, METoolbox expects that in each directory it will find the following files:
+
+OUTCAR
+OUTCAR_berry_1
+OUTCAR_berry_2
+OUTCAR_berry_3
+ 
+all of them may be compressed using standard gzip command (OUTCAR.gz etc.)
+
+OUTCAR should contain the single point calculation from which forces, stresses and magnetization will 
+be read, and OUTCAR_berry_* should contain Berry phase calculations for corresponding IGPAR direction.
+
+4. RUNNING METOOLBOX
+
+After all the calculations have been done, one can copy the results to some directory, and run any of the 
+provided programs. All of the programs take as the first argument the top-level directory name and start 
+reading from all its subdirectories. The programs calculating magnetic properties take as the second
+parameter the SAXIS orientation noted as "X/Y/Z" for example:
+
+$ me_coupling.py BiFeO3_100 1/0/0
+
+As reading of the OUTCARs takes most processing time, all programs will try to first use already cached 
+data from DIRECTORYNAME_pickled.dat file. In this manner, only first of the run programs will actually 
+read the contents of the subdirectories, all other will just read (100x faster) the pickled file with 
+all the data. If rereading of the subdirectories is needed, one can either remove *_picled.dat file, or 
+use optional argument "nocache" as the last argument given to the program.
+
+In this directory you may find the ZnO.tar.gz archive which contains all OUTCARs needed to calculate 
+piezoelectric properties of ZnO. You can run some programs on it and familiarise yourself with the 
+output:
+
+$ tar xvzf ZnO.tar.gz 
+ZnO/calc_00_0/OUTCAR                                      
+ZnO/calc_00_0/OUTCAR_berry_1                              
+(...)
+
+$ elastic.py ZnO
+Reading from directory: ZnO                                  
+Using cache: True                                            
+Reading calculation from ZnO/calc_00_0/OUTCAR                
+No magnetization available                                   
+Reading calculation from ZnO/calc_00_a-X/OUTCAR              
+Reading calculation from ZnO/calc_00_a+X/OUTCAR              
+Reading calculation from ZnO/calc_00_a-Y/OUTCAR              
+(...)
+Force constant matrix eigenvalues (eV Andstrom**-2  )        
+ -21.4798  -17.4711  -17.4322  -16.1557  -16.1137  -14.6069  -13.8063  -1.3609  -1.3163  -0.0001   0.0000   0.0001                                                                                                  
+
+Clamped-ion elastic constant matrix in Voigt notation (GPa)
+    303.2444     103.0292      73.5406       0.0000       0.0000       2.0713
+    103.0292     302.7433      73.3746       0.0000       0.0000       1.2988
+     73.5406      73.3746     331.0702      -0.0000      -0.0000       0.6576
+      0.0000       0.0000      -0.0000      60.5811       0.0799      -0.0000
+      0.0000       0.0000      -0.0000       0.0799      58.8990       0.0000
+      2.0713       1.2988       0.6576      -0.0000       0.0000      97.0409
+
+Eigenvalues:   -0.0305  -0.0066  -0.0024   117.7929   121.2002   193.9267   200.0649   258.1319   479.0228
+
+Relaxed-ion elastic constant matrix in Voigt notation (GPa)
+    221.1959     135.2075     122.2060      -0.0997      -0.0858       2.0580
+    135.2075     220.7527     122.0305      -0.1659      -0.0574       1.3253
+    122.2060     122.0305     236.0509       0.0289       0.0173       0.6443
+     -0.0997      -0.1659       0.0289      38.5322       0.0731      -0.0429
+     -0.0858      -0.0574       0.0173       0.0731      36.8937      -0.0434
+      2.0580       1.3253       0.6443      -0.0429      -0.0434      39.9322
+
+Eigenvalues:   -0.0489  -0.0157  -0.0037   73.7833   77.1153   79.7153   85.8613   113.3167   478.9922
+(...)
+
+When running METoolbox for the very first time on a given dataset, it is very useful to set the logging 
+level to the highest possible setting. In this way, you'll be able to spot any problems with your 
+calculations (and with METoolbox). This can be done by adding the following line at the beginning of the 
+program:
+
+loggable.log_level=LOG_ALLINFO
+
+Things that typically go wrong:
+
+1) Atoms jumping out of the unit-cell and appearing at the other end. This should in principle be 
+corrected by "try_fix_displacements()" call, but bugs are likely. One can monitor this by looking at 
+displacements printed out for each read calculation; none of them should be "large".
+
+2) Quantum of polarization issues. This will be present for sure if (1) is present, but also in case of 
+highly symmetric geometries, in which case the Berry phase strings tend to be -0.5 or 0.5, leading to
+unexpected jumps. Again, "try_fix_polarizations()" should take care of it, but things are likely to go 
+wrong. This will be visible at the level of polarization differences which are printed out.
+
+3) Accuracy of forces (stresses) might be to low to properly reproduce 3x near-zero eigenvalues of
+force constant (clamped ion elastic) matrix. In case, when inversion of any of those matrices results in
+a number of soft modes different than 3, a warning is issued. Note that sometimes, we might want to have
+matrix with such properties - in case of specific constraints on lattice, the translational (rotational) 
+invariance might be lost.
+
+5. HACKING METOOLBOX
+
+While METoolbox provides four useful programs for calculating interesting physical properties, much more
+can be done by quick hacks to the code. See the following examples located in additional_tools directory:
+
+- generate_phonon.py - can be used to generate an ARC file with animation of a specific phonon
+- mixup.py - shows how to mix two different sets of calculations in order to approximate results (in this 
+  case we transfer magnetic properties of the BFO to BFO thin film at 6% strain)
+- me_constrained.py - shows how to impose constraints on unit cell distortions, so that properties of
+  strained films can be calculated
+  
+6. METOOLBOX INTERNAL WORKINGS
+
+TO BE WRITTEN...
+   
+
+
+
+
+     
