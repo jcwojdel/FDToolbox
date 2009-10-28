@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from metoolbox.calculation_set import *
-from metoolbox.utility import *
-from metoolbox.linear_expansion import *
+from fdtoolbox.calculation_set import *
+from fdtoolbox.utility import *
+from fdtoolbox.linear_expansion import *
 
 import sys
 loggable.log_level = LOG_ALLINFO

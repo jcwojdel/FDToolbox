@@ -150,16 +150,19 @@ def tensor2voigt( tens, transform_directions = [[1,2]] ):
   else:
     return a    
 
-def iterate_all_indices(shape):
+def iterate_all_indices(shape,shape_min=None):
   """
   Generator function for looping through all possible combinations of the values in given ranges.
   """
-  for i in range(shape[0]):
+  if shape_min is None:
+    shape_min = [0]*len(shape)
+
+  for i in range(int(shape_min[0]),int(shape[0])):
     if len(shape) > 1:
-      for k in iterate_all_indices(shape[1:]):
+      for k in iterate_all_indices(shape[1:], shape_min[1:]):
         yield [i]+k
     else:
-      yield [i]
+      yield [i]    
 
 def iterate_shifts():
   """

@@ -2,11 +2,13 @@
 
 from numpy import *
 
-
-from metoolbox.calculation_set import calculation
 import copy
 import sys
 import os
+
+sys.path.append(os.path.join(sys.path[0],'../'))
+from fdtoolbox.calculation_set import calculation
+
 
 disp_length = [0.005, 0.005, 0.005]
 lat_disp_length = [0.01, 0.01, 0.01]

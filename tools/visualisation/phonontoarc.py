@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
-from metoolbox.calculation_set import *
-from metoolbox.linear_expansion import *
-from metoolbox.utility import *
-
 import sys
+import os
+
+sys.path.append(os.path.join(sys.path[0],'../../'))
+from fdtoolbox.calculation_set import *
+from fdtoolbox.linear_expansion import *
+from fdtoolbox.utility import *
+
 
 try:
   directory = sys.argv[1]
@@ -56,8 +59,11 @@ eigmode = (linalg.eig(lin_exp.B_m_n)[1])[:,mode_num]
 print '#Eigenmode number %d with eigenvalue %f'%(mode_num,cs.groundstate.volume*eigstruct[0][mode_num])
 sys.stdout.flush()
 
+if species is None:
+  species = cs.groundstate.num_atoms*["C"]
+
 cs.groundstate.save_to_arc("/dev/stdout", species)
 for i in range(30):
-  cs.groundstate.atoms += cos(2*pi*i/30.)/5.*eigmode.reshape((10,3)) 
+  cs.groundstate.atoms += cos(2*pi*i/30.)/5.*eigmode.reshape((cs.groundstate.num_atoms,3)) 
   cs.groundstate.save_to_arc("/dev/stdout", species, False)
   

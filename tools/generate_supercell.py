@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import sys
-from numpy import *
-from metoolbox.calculation_set import *
+import os
+
+sys.path.append(os.path.join(sys.path[0],'../'))
+from fdtoolbox.calculation_set import *
 
 if len(sys.argv) < 3:
   name = (sys.argv[0].split('/'))[-1]

@@ -1,5 +1,5 @@
 from numpy import *
-from metoolbox.calculation_set import *
+from fdtoolbox.calculation_set import *
 
 class linear_expansion(loggable):
   def __init__(self, calcset):

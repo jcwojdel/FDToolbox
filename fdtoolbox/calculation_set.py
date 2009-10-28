@@ -1,11 +1,7 @@
 from numpy import *
 
 
-from metoolbox.utility import *
-try:
-  import gzip
-except:
-  pass
+from fdtoolbox.utility import *
 
 import os
 import atexit
@@ -29,6 +25,11 @@ class calculation(loggable):
   - self.polarization - polarization as read by load_polarization() method (3 e/A**2)
   For other polarization related attributes see load_polarization() method documentation.
   """
+  try:
+      import gzip
+      have_gzip = True
+  except:
+      pass
 
   saxis = [ 0., 0., 1. ]
   
@@ -59,7 +60,7 @@ class calculation(loggable):
       fname = ''.join( [ filename, '_berry_%d' % kdirection ] )
       if os.access( fname, os.R_OK ):
         ifile = file( fname )
-      elif os.access(fname+'.gz', os.R_OK ):
+      elif self.have_gzip and os.access(fname+'.gz', os.R_OK ):
         ifile = gzip.open(fname+'.gz')
       else:
         self.berry_phase=3*[array([[0.,0.]])]
@@ -166,7 +167,7 @@ class calculation(loggable):
     """
     if os.access(filename, os.R_OK):
       F=file(filename)
-    elif os.access(filename+'.gz', os.R_OK):
+    elif self.have_gzip and os.access(filename+'.gz', os.R_OK):
       F=gzip.open(filename+'.gz')
     else:
       raise Exception("Missing file")
@@ -224,7 +225,6 @@ class calculation(loggable):
           data[i,:] = [float(val) for val in F.readline().split() ]
         
         self.unit_cell = mat(data[:,0:3])
-        self.recip_cell = mat(data[:,3:6]).T
       elif line.startswith("  in kB"):
         # Note that we are reading the line expressed in kBar, because due to the units it prints out 
         # more significant digits. It is then converted to eV/A**3
@@ -333,7 +333,6 @@ class calculation(loggable):
     self.name = F.readline()
     scale = float(F.readline())
     self.unit_cell = scale*mat( fromfile( F, dtype('float'), 9, ' ' ).reshape((3,3)) )
-    self.recip_cell = self.unit_cell.I
     
     self.species = F.readline().split()
     self.num_atoms = 0
@@ -351,7 +350,6 @@ class calculation(loggable):
       self.atoms = self.atoms*self.unit_cell
   
     F.close()
-    self.recip_cell = linalg.inv(self.unit_cell)
     
     if self.name.split()[0] == "SUPERCELL":
       self.is_supercell = True
@@ -542,6 +540,10 @@ class calculation(loggable):
 
     return supercell
   
+  @property
+  def recip_cell(self):
+    return self.unit_cell.I
+
   @property
   def cell_a(self):
     return linalg.norm(self.unit_cell[0,:])
