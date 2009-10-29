@@ -6,6 +6,11 @@ from fdtoolbox.utility import *
 import os
 import atexit
 import re
+try:
+  import gzip
+  have_gzip = True
+except:
+  have_gzip = False
 
 class calculation(loggable):
   """
@@ -25,11 +30,6 @@ class calculation(loggable):
   - self.polarization - polarization as read by load_polarization() method (3 e/A**2)
   For other polarization related attributes see load_polarization() method documentation.
   """
-  try:
-      import gzip
-      have_gzip = True
-  except:
-      pass
 
   saxis = [ 0., 0., 1. ]
   
@@ -60,7 +60,7 @@ class calculation(loggable):
       fname = ''.join( [ filename, '_berry_%d' % kdirection ] )
       if os.access( fname, os.R_OK ):
         ifile = file( fname )
-      elif self.have_gzip and os.access(fname+'.gz', os.R_OK ):
+      elif have_gzip and os.access(fname+'.gz', os.R_OK ):
         ifile = gzip.open(fname+'.gz')
       else:
         self.berry_phase=3*[array([[0.,0.]])]
@@ -167,7 +167,7 @@ class calculation(loggable):
     """
     if os.access(filename, os.R_OK):
       F=file(filename)
-    elif self.have_gzip and os.access(filename+'.gz', os.R_OK):
+    elif have_gzip and os.access(filename+'.gz', os.R_OK):
       F=gzip.open(filename+'.gz')
     else:
       raise Exception("Missing file")
