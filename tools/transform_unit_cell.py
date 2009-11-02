@@ -16,7 +16,10 @@ trans_dict = {'RtoC':mat([[1, -1, 1],
                           [0, 0, 1]])*\
                      mat([[1, -1, 1],
                           [-1, 1, 1],
-                          [1, 1, -1]])
+                          [1, 1, -1]]),
+              'one':mat([[1, 0, 0],
+                         [0, 1, 0],
+                         [0, 0, 1]])
               }
 inputfile = sys.argv[1]
 transformation = sys.argv[2]
@@ -26,7 +29,10 @@ if transformation in trans_dict:
 else:
   transformation = mat(transformation)
 
-outputfile = '/dev/stdout'
+if len(sys.argv)>3:
+  outputfile = sys.argv[3]
+else:
+  outputfile = '/dev/stdout'
 
 cell = calculation()
 cell.load_from_poscar(inputfile)
@@ -55,9 +61,23 @@ for s_count in cell.species:
   newcell.species.append( str(appended_s) )
 
 newcell.atoms = mat(newcell.atoms)
-
+newcell.num_atoms = newcell.atoms.shape[0]
 
 print '# transformed cell a = %.6f, b = %.6f, c = %.6f'%( newcell.cell_a, newcell.cell_b, newcell.cell_c )
 print '# alpha = %.4f, beta = %.4f, gamma = %.4f'%( newcell.cell_alpha, newcell.cell_beta, newcell.cell_gamma )
 
-newcell.save_to_poscar('/dev/stdout')
+if outputfile[-3:] == 'arc' or outputfile[-3:] == 'car':
+  if len(sys.argv) > 4:
+    spc = sys.argv[4].split()
+    species = []
+    for s in spc:
+      ns = s.split('*')
+      if len(ns) == 1:
+        species.append(ns[0])
+      else:
+        species.extend( int(ns[0])*[ns[1]] )
+  else:
+    species = None
+  newcell.save_to_arc(outputfile, species)
+else:
+  newcell.save_to_poscar(outputfile)
