@@ -251,4 +251,13 @@ def invert_with_warning(matrix, threshold, warning_msg, expected_skip):
   
   return inv_m                 
     
+def argvtospecies( argv ):
+  species = []
+  for s in argv.split():
+    ns = s.split('*')
+    if len(ns) == 1:
+      species.append(ns[0])
+    else:
+      species.extend( int(ns[0])*[ns[1]] )
+  return species
 

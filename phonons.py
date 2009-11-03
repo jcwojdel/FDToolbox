@@ -14,17 +14,22 @@ try:
   condition = sys.argv[2]
 except:
   condition = "True"
+
+try:
+  polarities = sys.argv[3]
+except:
+  polarities = ""
   
 try:
-  usecache = argv[3] != 'nocache'
+  saxis = [float(v) for v in sys.argv[4].split('/')]
 except:
-  usecache = True
-  
+  saxis = [0., 0., 1.]
+    
+    
 print 'Reading from directory: %s' % directory
-print 'Using cache: %s' % `usecache`
 
-saxis = [0., 0., 1.]
-cs=calculation_set.read_directory(directory, saxis, usecache)
+
+cs=calculation_set.read_directory(directory, saxis, True)
 
 cs.set_ionic('.*/calc_.._.*[0123]')
 cs.set_lattice('.*/calc_00_...')
@@ -53,8 +58,15 @@ print 'Force constant matrix eigenvalues (%s)'%units
 print mat2str( evalues.T, '%10.4f' )
 print 'Force constant matrix eigenmodes'
 print mat2str( evectors, '%10.4f' )
-    
+  
+if 'P' in polarities:   
+  print 'Dielectric polarity of the modes (1e-3)'
+  print mat2str( 1e3*dot( evectors.T, lin_exp.B_m_alpha ) )
 
+if 'M' in polarities:
+  print 'Magnetic "polarity" of the modes (1e-3)'
+  print mat2str( 1e3*dot( evectors.T, lin_exp.B_m_mu ) )
+ 
 
 #print 'Force constant matrix eigenvalues (%s)'%units
 #print mat2str( evalues.T, '%10.4f' )

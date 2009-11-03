@@ -399,16 +399,9 @@ class calculation(loggable):
 
     if species is None:
       # Prepare a list of species in the calculation if none specified
-      # Listing a periodic table does not make much sense, but ARC does not allow for dummy atoms, so
-      # we need to pick some from the real species.
-      species=[]
-      
-      cur_s = 0
-      s_table = ['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al', 'Si', 'P', 'S', 'Cl','Ar']
-      for s in self.species:
-        species.extend( [s_table[cur_s]] * int(s) )
-        cur_s+=1
-      
+      # ARC does not allow for dummy atoms, so we fill everything with carbon
+      species=self.num_atoms*['C']
+            
     #FIXME: If you think this is the ugliest python code you've ever seen,
     # you are quite right! It is literal translation of some old AWK script.
     # But it works for now, so... 

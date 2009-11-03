@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import sys
+import os
+
+sys.path.append(os.path.join(sys.path[0],'../../'))
 from fdtoolbox.calculation_set import *
 from fdtoolbox.utility import *
 from fdtoolbox.linear_expansion import *
-
-import sys
 
 try:
   directory = sys.argv[1]

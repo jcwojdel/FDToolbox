@@ -20,7 +20,7 @@ except:
   mode_num = -1
 
 try:
-  species = sys.argv[3].split()
+  species = argvtospecies( sys.argv[3] )
 except:
   species = None
 

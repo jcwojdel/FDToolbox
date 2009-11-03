@@ -6,6 +6,7 @@ from numpy import *
 
 sys.path.append(os.path.join(sys.path[0],'../'))
 from fdtoolbox.calculation_set import *
+from fdtoolbox.utility import argvtospecies
 
 
 trans_dict = {'RtoC':mat([[1, -1, 1],
@@ -68,14 +69,7 @@ print '# alpha = %.4f, beta = %.4f, gamma = %.4f'%( newcell.cell_alpha, newcell.
 
 if outputfile[-3:] == 'arc' or outputfile[-3:] == 'car':
   if len(sys.argv) > 4:
-    spc = sys.argv[4].split()
-    species = []
-    for s in spc:
-      ns = s.split('*')
-      if len(ns) == 1:
-        species.append(ns[0])
-      else:
-        species.extend( int(ns[0])*[ns[1]] )
+    species = argvtospecies( sys.argv[4] )
   else:
     species = None
   newcell.save_to_arc(outputfile, species)
