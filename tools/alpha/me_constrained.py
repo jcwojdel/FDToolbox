@@ -27,6 +27,7 @@ print 'Reading from directory: %s' % directory
 print 'Using saxis: %s' % `saxis`
 print 'Using cache: %s' % `usecache`
 
+loggable.log_level=LOG_ALLINFO
 cs=calculation_set.read_directory(directory, saxis, usecache)
 
 cs.set_ionic('.*/calc_.._.*[0123]')
@@ -89,11 +90,20 @@ for name, plane in zip(namelist,planelist):
     cs.clear_lattice_constraints()
     cs.add_lattice_constraint( plane, shears)
     lin_exp.calculate_expansion_coefficients()
-  
+      
     me, units = lin_exp.magneto_electric_coupling()
     print 'Full ME coupling (%s)'%units
     print mat2str( me )
     print 'Maximum coupling: %f %s'%(sqrt(max(linalg.eig(dot(me,me.T))[0])), units)
+    
+    de, units = lin_exp.piezoelectric_strain_tensor()
+    print 'Piezoelectric strain tensor (%s)'%units
+    print mat2str(de.T)
+    
+    de, units = lin_exp.piezoelectric_stress_tensor()
+    print 'Piezoelectric stress tensor (%s)'%units
+    print mat2str(de.T)
+    
     
     vx = plane[0,:]
     vy = plane[1,:]
