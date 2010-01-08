@@ -47,6 +47,9 @@ class linear_expansion(loggable):
   def born_charges(self):
     return -self.volume*self.B_m_alpha, "|e|"
   
+  def magnetic_strengths(self):
+    return self.B_m_mu, "mu_B A**-1"
+  
   def piezoelectric_stress_tensor(self, ionic=True):
     if ionic is True:
       rval = self.Bhat_alpha_j

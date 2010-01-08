@@ -7,6 +7,7 @@ LOG_INFO=2
 LOG_WARNING=3
 LOG_ALLINFO=4
 
+
 class loggable:
   """
   Simple class allowing for logging messages through it's debug() method.
@@ -14,6 +15,7 @@ class loggable:
   log_level=LOG_WARNING
   _last_message = None
   _last_count = 0
+  log_names = ['===', 'EE:', 'II:', 'WW:', 'AA:']
   
   @classmethod
   def debug(cls,text,level):
@@ -23,7 +25,7 @@ class loggable:
       elif cls._last_count > 1:
         print 'repeated (%d times)' % cls._last_count
       else:
-        print text
+        print cls.log_names[level], text
         cls._last_message = text
         cls._last_count = 1
 

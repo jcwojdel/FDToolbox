@@ -33,9 +33,6 @@ except:
   
 
   
-print '#Reading from directory: %s' % directory
-print '#Using cache: %s' % `usecache`
-
 saxis = [0., 0., 1.]
 cs=calculation_set.read_directory(directory, saxis, usecache)
 
@@ -56,13 +53,11 @@ if mode_num < 0:
   mode_num = nonzero(eigstruct[0]==eigstruct[0].min())[0][0]
 
 eigmode = (linalg.eig(lin_exp.B_m_n)[1])[:,mode_num]
-print '#Eigenmode number %d with eigenvalue %f'%(mode_num,cs.groundstate.volume*eigstruct[0][mode_num])
-sys.stdout.flush()
 
 if species is None:
   species = cs.groundstate.num_atoms*["C"]
 
-cs.groundstate.save_to_arc("/dev/stdout", species)
+cs.groundstate.save_to_arc("/dev/stdout", species, True, 'Eigenmode number %d with eigenvalue %f'%(mode_num,cs.groundstate.volume*eigstruct[0][mode_num]))
 for i in range(30):
   cs.groundstate.atoms += cos(2*pi*i/30.)/5.*eigmode.reshape((cs.groundstate.num_atoms,3)) 
   cs.groundstate.save_to_arc("/dev/stdout", species, False)

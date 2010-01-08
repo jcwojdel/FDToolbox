@@ -63,6 +63,7 @@ class calculation(loggable):
       elif have_gzip and os.access(fname+'.gz', os.R_OK ):
         ifile = gzip.open(fname+'.gz')
       else:
+        # Make sure, we have 0,0,0 as polarisation in case there is no berry phase output available 
         self.berry_phase=3*[array([[0.,0.]])]
         self.berry_ev=3*[array([0., 0., 0.])]
         self.berry_ion=3*[[[0., 0., 0.]]]
@@ -88,20 +89,27 @@ class calculation(loggable):
           data = line.split()
           if data[2] == "T":
             self.numspin = 2
-        elif line.startswith("Expectation value"):
+        elif line.startswith("Expectation value"): #VASP 4.x
           line = ifile.readline()
           data = line.split() 
           self.berry_ev[kdirection-1].append(  [ float(data[3][:-1]), float(data[4][:-1]), float(data[5]) ] )
-        elif line.startswith("K-point string"):
+        elif line.startswith(" Spin component "): #VASP 5.x
+          data = line.split()
+          self.berry_ev[kdirection-1].append( [ float(data[4]), float(data[5]), float(data[6]) ] )
+        elif line.startswith("K-point string"): #VASP 4.x 5.x
           data = line.split()
           last_kpoint_weight = float(data[5])
-        elif line.startswith("Berry-Phase term:  "):
+        elif line.startswith("Berry-Phase term:  "): #VASP 4.x
           data = line.split()
           self.berry_phase[kdirection-1].append( [float(data[2]), last_kpoint_weight] )
-        elif line.startswith("ionic term:"):
-          line = ifile.readline()
-          data = line.split() 
-          self.berry_ion[kdirection-1] = [ [ float(data[3][:-1]), float(data[4][:-1]), float(data[5]) ] ]
+        elif line.startswith("              Im ln[Det|M_k|]=" ): #VASP 5.x
+          data = line.split()
+          self.berry_phase[kdirection-1].append( [float(data[-2]), last_kpoint_weight] )
+        #No need to read ionic term - we will recalculate it anyway   
+        #elif line.startswith("ionic term:"): #VASP 4.x
+        #  line = ifile.readline()
+        #  data = line.split() 
+        #  self.berry_ion[kdirection-1] = [ [ float(data[3][:-1]), float(data[4][:-1]), float(data[5]) ] ]
       
       self.berry_phase[kdirection-1] = array(self.berry_phase[kdirection-1])
       self.berry_ev[kdirection-1] = mean(array(self.berry_ev[kdirection-1]), axis=0)
@@ -148,7 +156,7 @@ class calculation(loggable):
     polarization quantum).
     """    
     # Gather data from all three directions
-    
+
     self.polarization = [self.berry_term()*self.unit_cell] + mean(self.ionic_term(),axis=0) + mean(self.berry_ev,axis=0)
 
     # Note that VASP reports data in 'electrons * A', meaning the lack of minus sign
@@ -386,13 +394,15 @@ class calculation(loggable):
     F.write( "\n" )
     F.close()
     
-  def save_to_arc(self, filename, species = None, header = True):
+  def save_to_arc(self, filename, species = None, header = True, comment = None):
     """
     Save the system in ARC file
     """
     if header:
       F = open( filename, 'w' )
       F.write( "!BIOSYM archive 2\n" )
+      if comment is not None:
+        F.write( '!%s\n'%comment )
       F.write( "PBC=ON\n" )
     else:
       F = open( filename, 'a' )
@@ -638,6 +648,16 @@ class calculation_set(loggable):
       if c.energy < me:
         me = c.energy
         cs.groundstate = c
+      
+    supercell_definition = re.search("(SUPERCELL)\s+([^\s]+)", cs.groundstate.name) 
+    if supercell_definition:
+      print supercell_definition.groups()
+      repetitions = re.match("([0-9]+)x([0-9]+)x([0-9]+)", supercell_definition.groups()[1])
+      if repetitions:
+        cs.expand_translational_symmetry([int(r) for r in repetitions.groups()])
+      else:
+        #TODO: load a file with translationlist?
+        cs.expand_translational_symmetry(xxx)
         
     if usecache:
       F = open(dataname,'wb')
@@ -724,10 +744,20 @@ class calculation_set(loggable):
           print "OUT"
           print dest_calc.berry_phase[kdir]
           
+    def align_ions( ref_calc, dest_calc ):
+      for idx,atom in enumerate(dest_calc.atoms):
+        gs_atom = ref_calc.atoms[idx]
+        for dx,dy,dz in iterate_shifts():
+          new_atom = atom+[[dx,dy,dz]]*dest_calc.unit_cell
+          if metro_dist(new_atom, gs_atom) <= 0.5:
+            loggable.debug('    moving atom %d by %d,%d,%d' % (idx,dx,dy,dz),LOG_ALLINFO)
+            dest_calc.atoms[idx] = new_atom[0]
     
+    self._calculation_list[0].recalculate_polarization()
     for i in range(1,len(self._calculation_list)):
       print "align", self._calculation_list[i-1].fileID, self._calculation_list[i].fileID
       align_berry_phases(self._calculation_list[i-1],self._calculation_list[i])
+      align_ions(self._calculation_list[i-1],self._calculation_list[i])
       self._calculation_list[i].recalculate_polarization()
     
 
@@ -951,4 +981,25 @@ class calculation_set(loggable):
       
     self._lattice_constraint += constraint
     
+  def expand_translational_symmetry(self, supercell):
+    #FIXME!!!
+    # more bad things than I can really tell....
+    print self.groundstate.unit_cell
+    original_cell = self.groundstate.unit_cell / array([supercell, supercell, supercell]).T
+    print original_cell
+    
+    def shift_calc(calc, shift):
+      newcalc = copy.deepcopy(calc)
+      for i in range(calc.atoms.shape[0]):
+        newcalc.atoms[i,:] = calc.atoms[i,:]+shift
+      return newcalc
+
+    newcalclist = []
+    for i,j,k in iterate_all_indices(supercell):
+      shift = dot([i,j,k], original_cell)
+      for calc in self._calculation_list:
+        newcalclist.append(shift_calc(calc, shift))
+    
+    self._calculation_list = newcalclist
+    print mat2str(vstack([c.atoms for c in self._calculation_list]))
     

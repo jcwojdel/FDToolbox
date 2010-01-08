@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 
+import sys
+import os
+
+sys.path.append(os.path.join(sys.path[0],'../../'))
 from fdtoolbox.calculation_set import *
 from fdtoolbox.utility import *
 from fdtoolbox.linear_expansion import *
 from numpy import *
-import sys
 
 def align(preold_evectors, old_evectors, evalues, evectors):
   if old_evectors is None:
@@ -58,7 +61,7 @@ all_evalues = []
 all_evectors = []
 saxis = [0., 0., 1.]
 
-listofdirs=['thick-0.06', 'thick-0.05', 'thick-0.04', 'thick-0.03', 'thick-0.02', 'thick-0.01', 'thick_limit']
+listofdirs=['thick-0.06', 'thick-0.055', 'thick-0.05', 'thick-0.04', 'thick-0.03', 'thick-0.02', 'thick-0.01', 'thick_limit']
 listofdirs.reverse()
 #listofdirs=['thick-0.07', 'thick-0.06', 'thick-0.05', 'thick-0.04', 'thick-0.03']
 #listofdirs.reverse()
