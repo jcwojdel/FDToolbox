@@ -93,9 +93,9 @@ class calculation(loggable):
           line = ifile.readline()
           data = line.split() 
           self.berry_ev[kdirection-1].append(  [ float(data[3][:-1]), float(data[4][:-1]), float(data[5]) ] )
-        elif line.startswith(" Spin component "): #VASP 5.x
+        elif line.find("e<r>_ev") > 0: #VASP 5.x
           data = line.split()
-          self.berry_ev[kdirection-1].append( [ float(data[4]), float(data[5]), float(data[6]) ] )
+          self.berry_ev[kdirection-1].append( [ float(data[-5]), float(data[-4]), float(data[-3]) ] )
         elif line.startswith("K-point string"): #VASP 4.x 5.x
           data = line.split()
           last_kpoint_weight = float(data[5])
