@@ -264,10 +264,16 @@ class calculation(loggable):
         self.species = line.split()[4:]
       elif line.startswith("   ZVAL   ="):
         # Effective Z of each nuclei
-        data = line.split()[2:]
+        # Note that it might be multiline 
+        data = []
+        while line.startswith("   ZVAL   ="):
+          data.extend( line.split()[2:] )
+          line = F.readline()
+          
         self.zvals = []
         for num,sp in enumerate(self.species):
           self.zvals.extend(int(sp)*[float(data[num])])
+        
       elif line.startswith(" total charge "):
         F.readline()
         F.readline()
