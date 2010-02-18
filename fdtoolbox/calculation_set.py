@@ -743,10 +743,10 @@ class calculation_set(loggable):
           print ref_calc.berry_phase[kdir]
           print dest_calc.berry_phase[kdir]
           for i in range(ref_calc.berry_phase[kdir].shape[0]):
-            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] > 0.5:
-              dest_calc.berry_phase[kdir][i,0] += 1.0
-            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] < -0.5:
-              dest_calc.berry_phase[kdir][i,0] -= 1.0
+            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] > self.BPH_MAXDIST:
+              dest_calc.berry_phase[kdir][i,0] += self.BPH_CORRECTION
+            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] < -self.BPH_MAXDIST:
+              dest_calc.berry_phase[kdir][i,0] -= self.BPH_CORRECTION
           print "OUT"
           print dest_calc.berry_phase[kdir]
           

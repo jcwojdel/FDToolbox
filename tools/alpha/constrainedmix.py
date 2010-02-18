@@ -8,56 +8,58 @@ from fdtoolbox.calculation_set import *
 from fdtoolbox.utility import *
 from fdtoolbox.linear_expansion import *
 
-try:
-  directory = sys.argv[1]
-except:
-  directory = "."
-  
-try:
-  saxis = [float(v) for v in sys.argv[2].split('/')]  
-except:
-  saxis = [0., 0., 1.]
+directory1 = sys.argv[1]
 
-try:
-  usecache = argv[3] != 'nocache'
-except:
-  usecache = True
+directory2 = sys.argv[2]
+
+usecache = True
+saxis = [0., 0., 1.]
   
 print 'Reading from directory: %s' % directory
 print 'Using saxis: %s' % `saxis`
 print 'Using cache: %s' % `usecache`
 
 loggable.log_level=LOG_WARNING
-cs=calculation_set.read_directory(directory, saxis, usecache)
+cs1=calculation_set.read_directory(directory1, saxis, usecache)
 
-cs.set_ionic('.*/calc_.._.*[0123]')
-cs.set_lattice('.*/calc_00_...')
-cs.set_groundstate('.*/calc_00_0')
+cs1.set_ionic('.*/calc_.._.*[0123]')
+cs1.set_lattice('.*/calc_00_...')
+cs1.set_groundstate('.*/calc_00_0')
 
 calculation_set.BPH_MAXDIST = 0.25
 calculation_set.BPH_CORRECTION = 0.5
 
-cs.try_fix_displacements()  
-cs.try_fix_polarizations()
+cs1.try_fix_displacements()  
+cs1.try_fix_polarizations()
+
+cs2=calculation_set.read_directory(directory2, saxis, usecache)
+
+cs2.set_ionic('.*/calc_.._.*[0123]')
+cs2.set_lattice('.*/calc_00_...')
+cs2.set_groundstate('.*/calc_00_0')
+
+cs2.try_fix_displacements()  
+cs2.try_fix_polarizations()
+
 
 print '==============================================================================='
 print '=                             UNPERTURBED STRUCTURE                           ='
 print '==============================================================================='
 
 print 'Unit cell (A)'
-print mat2str(cs.groundstate.unit_cell)
-print 'a=%f b=%f c=%f, alpha=%f, beta=%f gamma=%f\n'%(cs.groundstate.cell_a, 
-                                                    cs.groundstate.cell_b,
-                                                    cs.groundstate.cell_c,
-                                                    cs.groundstate.cell_alpha,
-                                                    cs.groundstate.cell_beta,
-                                                    cs.groundstate.cell_gamma)
+print mat2str(cs1.groundstate.unit_cell)
+print 'a=%f b=%f c=%f, alpha=%f, beta=%f gamma=%f\n'%(cs1.groundstate.cell_a, 
+                                                    cs1.groundstate.cell_b,
+                                                    cs1.groundstate.cell_c,
+                                                    cs1.groundstate.cell_alpha,
+                                                    cs1.groundstate.cell_beta,
+                                                    cs1.groundstate.cell_gamma)
 
 print 'Atomic positions (A)'
-print mat2str(cs.groundstate.atoms)
+print mat2str(cs1.groundstate.atoms)
 
-pc_calc = copy.copy(cs.groundstate)
-pc_calc.unit_cell = dot(mat("-1 1 1; 1 -1 1; 1 1 -1"), cs.groundstate.unit_cell )
+pc_calc = copy.copy(cs1.groundstate)
+pc_calc.unit_cell = dot(mat("-1 1 1; 1 -1 1; 1 1 -1"), cs1.groundstate.unit_cell )
 print 'PC unit cell (A)'
 print mat2str( pc_calc.unit_cell )
 print 'a=%f b=%f c=%f, alpha=%f, beta=%f gamma=%f\n'%(pc_calc.cell_a, 
@@ -71,11 +73,19 @@ print 'a=%f b=%f c=%f, alpha=%f, beta=%f gamma=%f\n'%(pc_calc.cell_a,
 
 
 print 'Magnetic moment (mu_B/cell)'
-print mat2str(cs.groundstate.magnetization)
+print mat2str(cs1.groundstate.magnetization)
 
 
-lin_exp = linear_expansion( cs )
-lin_exp.calculate_expansion_coefficients()
+lin_exp1 = linear_expansion( cs1 )
+lin_exp1.calculate_expansion_coefficients()
+
+lin_exp2 = linear_expansion( cs2 )
+lin_exp2.calculate_expansion_coefficients()
+
+lin_exp = lin_exp1
+lin_exp.B_m_alpha = lin_exp2.B_m_alpha
+lin_exp.B_alpha_j = lin_exp2.B_alpha_j
+lin_exp.calculate_expansion_coefficients(False)
 
 print '==============================================================================='
 print '=                         CLAMPED CELL PROPERTIES                             ='
@@ -215,12 +225,6 @@ for name, plane in zip(namelist,planelist):
     print 'Piezomagnetic strain tensor (1e-8 %s)'%units
     print '   xx       xy       xz       yx       yy       yz       zx       zy       zz'
     print mat2str(1e8*de.T)
-    
-    de, units = lin_exp.piezomagnetic_stress_tensor(False)
-    print 'Frozen ion piezomagnetic stress tensor (1e+3 %s)'%units
-    print '   xx       xy       xz       yx       yy       yz       zx       zy       zz'
-    print mat2str(0.001*de.T)
-    
 
     me, units = lin_exp.magneto_electric_coupling()
     print 'Full ME coupling (%s)'%units
