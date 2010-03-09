@@ -19,7 +19,6 @@ def move_all_atoms(calc):
     for direction in range(3):
       displacement = zeros((1,3))
       displacement[0, direction] = disp_length[direction % len(disp_length)]
-      displacement = displacement*calc.recip_cell
       
       for orientation in ['+', '-']:
         c = copy.deepcopy(calc)

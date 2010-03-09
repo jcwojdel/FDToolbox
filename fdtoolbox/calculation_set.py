@@ -272,10 +272,16 @@ class calculation(loggable):
         self.species = line.split()[4:]
       elif line.startswith("   ZVAL   ="):
         # Effective Z of each nuclei
-        data = line.split()[2:]
+        # Note that it might be multiline 
+        data = []
+        while line.startswith("   ZVAL   ="):
+          data.extend( line.split()[2:] )
+          line = F.readline()
+          
         self.zvals = []
         for num,sp in enumerate(self.species):
           self.zvals.extend(int(sp)*[float(data[num])])
+        
       elif line.startswith(" total charge "):
         F.readline()
         F.readline()
@@ -733,16 +739,21 @@ class calculation_set(loggable):
         if ref_calc.berry_phase[kdir].shape != dest_calc.berry_phase[kdir].shape:
           self.debug("Cannot align berry phases", LOG_WARNING)
         else:
-          print "IN"
-          print ref_calc.berry_phase[kdir]
-          print dest_calc.berry_phase[kdir]
+          #print "IN"
+          #print ref_calc.berry_phase[kdir]
+          #print dest_calc.berry_phase[kdir]
+          count = 0
           for i in range(ref_calc.berry_phase[kdir].shape[0]):
-            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] > 0.5:
-              dest_calc.berry_phase[kdir][i,0] += 1.0
-            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] < -0.5:
-              dest_calc.berry_phase[kdir][i,0] -= 1.0
-          print "OUT"
-          print dest_calc.berry_phase[kdir]
+            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] > self.BPH_MAXDIST:
+              dest_calc.berry_phase[kdir][i,0] += self.BPH_CORRECTION
+              count+=1
+            while ref_calc.berry_phase[kdir][i,0] - dest_calc.berry_phase[kdir][i,0] < -self.BPH_MAXDIST:
+              dest_calc.berry_phase[kdir][i,0] -= self.BPH_CORRECTION
+              count+=1
+          if count > 0:
+            print 'Number of flips: %d'%count
+          #print "OUT"
+          #print dest_calc.berry_phase[kdir]
           
     def align_ions( ref_calc, dest_calc ):
       for idx,atom in enumerate(dest_calc.atoms):

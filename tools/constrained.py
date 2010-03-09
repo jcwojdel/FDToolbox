@@ -3,7 +3,7 @@
 import sys
 import os
 
-sys.path.append(os.path.join(sys.path[0],'../../'))
+sys.path.append(os.path.join(sys.path[0],'../'))
 from fdtoolbox.calculation_set import *
 from fdtoolbox.utility import *
 from fdtoolbox.linear_expansion import *
@@ -91,6 +91,18 @@ print mat2str(ee)
 bc, units = lin_exp.born_charges()
 print 'Born charges (%s)'%units
 print mat2str(bc)
+
+def explain_di_tensor(di):
+  max_v, max_e = linalg.eig(dot(di,di.T))
+  
+  for i in range(3):
+    print 'susceptibility: %f in principal direction: %s'%(sqrt(max_v[i]), mat2str(max_e[:,i].T))
+
+
+di, units = lin_exp.electric_susceptibility(lattice=False)
+print 'Frozen cell lattice mediated dielectric susceptibility (%s)'%units
+print mat2str(di)                                            
+explain_di_tensor(di)
 
 ms, units = lin_exp.magnetic_strengths()
 print 'Magnetic strengths (1e-3 * %s)'%units
@@ -210,11 +222,22 @@ for name, plane in zip(namelist,planelist):
     print 'Piezoelectric strain tensor (%s)'%units
     print '   xx       xy       xz       yx       yy       yz       zx       zy       zz'
     print mat2str(de.T)
+
+    di, units = lin_exp.electric_susceptibility()
+    print 'Lattice mediated dielectric susceptibility (%s)'%units
+    print mat2str(di)       
+    explain_di_tensor(di)                                    
     
     de, units = lin_exp.piezomagnetic_strain_tensor()
     print 'Piezomagnetic strain tensor (1e-8 %s)'%units
     print '   xx       xy       xz       yx       yy       yz       zx       zy       zz'
     print mat2str(1e8*de.T)
+    
+    de, units = lin_exp.piezomagnetic_stress_tensor(False)
+    print 'Frozen ion piezomagnetic stress tensor (1e+3 %s)'%units
+    print '   xx       xy       xz       yx       yy       yz       zx       zy       zz'
+    print mat2str(0.001*de.T)
+    
 
     me, units = lin_exp.magneto_electric_coupling()
     print 'Full ME coupling (%s)'%units

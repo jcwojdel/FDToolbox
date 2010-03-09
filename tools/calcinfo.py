@@ -8,6 +8,9 @@ from fdtoolbox.calculation_set import *
 from fdtoolbox.utility import *
 from fdtoolbox.linear_expansion import *
 
+calculation_set.BPH_MAXDIST = 0.25
+calculation_set.BPH_CORRECTION = .50
+
 try:
   path = sys.argv[1]
 except:
