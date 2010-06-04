@@ -44,6 +44,13 @@ lin_exp = linear_expansion( cs )
 lin_exp.calculate_expansion_coefficients()
 
 fc_matrix, units = lin_exp.force_constant_matrix()
+if 'Z' in polarities:
+  print 'Using atomic masses in the calculations'
+  units += '*amu**-1'
+  for i in range(len(cs.groundstate.pomass)):
+    fc_matrix[i*3:i*3+3,:] /= sqrt(cs.groundstate.pomass[i])
+    fc_matrix[:,i*3:i*3+3] /= sqrt(cs.groundstate.pomass[i])
+
 evalues, evectors = linalg.eig(fc_matrix)
 
 
@@ -57,8 +64,14 @@ for i,eigenvalue in enumerate(evalues):
 evalues = array(new_evalues)
 evectors = hstack(new_evectors)
 
-print 'Force constant matrix eigenvalues (%s)'%units
-print mat2str( evalues.T, '%10.4f' )
+if 'Z' in polarities:
+  print 'Phonon frequencies (cm**-1)'
+  evalues[:]=[sign(a)*sqrt(abs(a)) for a in evalues]
+  print mat2str(SQRTEVANGAMU_TO_CM*evalues.T, '%10.4f')
+else:  
+  print 'Force constant matrix eigenvalues (%s)'%units
+  print mat2str( evalues.T, '%10.4f' )
+  
 print 'Force constant matrix eigenmodes'
 print mat2str( evectors, '%10.4f' )
   
