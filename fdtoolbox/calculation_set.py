@@ -281,7 +281,18 @@ class calculation(loggable):
         self.zvals = []
         for num,sp in enumerate(self.species):
           self.zvals.extend(int(sp)*[float(data[num])])
-        
+      elif line.startswith("   POMASS =") and line.count('ZVAL') == 0:
+        # Atomic mass of each nuclei
+        # Note that it might be multiline
+        data = []
+        while line.startswith("   POMASS ="):
+          data.extend( line.split()[2:] )
+          line = F.readline()
+          
+        self.pomass = []
+        for num,sp in enumerate(self.species):
+          self.pomass.extend(int(sp)*[float(data[num])])
+                
       elif line.startswith(" total charge "):
         F.readline()
         F.readline()

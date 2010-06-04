@@ -35,12 +35,22 @@ cs.set_ionic('.*/calc_.._.*[0123]')
 cs.set_lattice('.*/calc_00_...')
 cs.set_groundstate('.*/calc_00_0')
  
+calculation_set.BPH_MAXDIST = 0.25
+calculation_set.BPH_CORRECTION = 0.5
 cs.try_fix_displacements()
+cs.try_fix_polarizations()
 
 lin_exp = linear_expansion( cs )
 lin_exp.calculate_expansion_coefficients()
 
 fc_matrix, units = lin_exp.force_constant_matrix()
+if 'Z' in polarities:
+  print 'Using atomic masses in the calculations'
+  units += '*amu**-1'
+  for i in range(len(cs.groundstate.pomass)):
+    fc_matrix[i*3:i*3+3,:] /= sqrt(cs.groundstate.pomass[i])
+    fc_matrix[:,i*3:i*3+3] /= sqrt(cs.groundstate.pomass[i])
+
 evalues, evectors = linalg.eig(fc_matrix)
 
 
@@ -54,18 +64,24 @@ for i,eigenvalue in enumerate(evalues):
 evalues = array(new_evalues)
 evectors = hstack(new_evectors)
 
-print 'Force constant matrix eigenvalues (%s)'%units
-print mat2str( evalues.T, '%10.4f' )
+if 'Z' in polarities:
+  print 'Phonon frequencies (cm**-1)'
+  evalues[:]=[sign(a)*sqrt(abs(a)) for a in evalues]
+  print mat2str(SQRTEVANGAMU_TO_CM*evalues.T, '%10.4f')
+else:  
+  print 'Force constant matrix eigenvalues (%s)'%units
+  print mat2str( evalues.T, '%10.4f' )
+  
 print 'Force constant matrix eigenmodes'
 print mat2str( evectors, '%10.4f' )
   
 if 'P' in polarities:   
-  print 'Dielectric polarity of the modes (1e-3)'
-  print mat2str( 1e3*dot( evectors.T, lin_exp.B_m_alpha ) )
+  print 'Dielectric polarity of the modes'
+  print mat2str( dot( lin_exp.born_charges()[0].T, evectors ), '%10.4f' )
 
 if 'M' in polarities:
   print 'Magnetic "polarity" of the modes (1e-3)'
-  print mat2str( 1e3*dot( evectors.T, lin_exp.B_m_mu ) )
+  print mat2str( 1e3*dot( lin_exp.B_m_mu.T, evectors ), '%10.4f' )
  
 
 #print 'Force constant matrix eigenvalues (%s)'%units
