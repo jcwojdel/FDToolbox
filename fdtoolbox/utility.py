@@ -72,6 +72,11 @@ EEAEV_TO_EPSILON0 = 180.95126
   #      * 0.00067458168
 BM2A3EV_TO_1MU0 = 0.00067458168
 
+  # You have: sqrt(eV angstrom**-2*amu**-1)/(2pi)/c
+  # You want: cm**-1
+  #         * 521.47092
+SQRTEVANGAMU_TO_CM = 521.47092
+
 
 def metro_dist( v1, v2 ):
   """

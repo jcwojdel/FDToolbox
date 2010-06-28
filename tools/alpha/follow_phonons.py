@@ -61,7 +61,11 @@ all_evalues = []
 all_evectors = []
 saxis = [0., 0., 1.]
 
-listofdirs=['thick-0.06', 'thick-0.055', 'thick-0.05', 'thick-0.04', 'thick-0.03', 'thick-0.02', 'thick-0.01', 'thick_limit']
+listofdirs=['thick-0.06', \
+            #'thick-0.055', \
+            'thick-0.05', \
+            #'thick-0.045', \
+            'thick-0.04', 'thick-0.03', 'thick-0.02', 'thick-0.01', 'thick_limit']
 listofdirs.reverse()
 #listofdirs=['thick-0.07', 'thick-0.06', 'thick-0.05', 'thick-0.04', 'thick-0.03']
 #listofdirs.reverse()
@@ -107,8 +111,15 @@ for vec in all_evectors:
   #RGB = RGB / sum(RGB)
   all_colors.append(RGB)
 
-all_evalues = interpolate(all_evalues, 4, True)
-all_colors = interpolate(all_colors, 4)
+xdata=[-6, \
+       #-5.5, \ 
+       -5, \
+       #-4.5, \
+       -4, -3, -2, -1, 0]
+xdata.reverse()
+
+#all_evalues = interpolate(all_evalues, 4, True)
+#all_colors = interpolate(all_colors, 4)
 
 for i in range(len(all_colors)):
   c = all_colors[i]
@@ -121,6 +132,7 @@ for i in range(len(all_colors)):
 all_evalues = mat(all_evalues)
 all_colors = mat(all_colors)
 
+
 for i in range(all_evalues.shape[1]):
-  print mat2str(hstack([ array([range(all_evalues.shape[0])]).T , all_evalues[:,i], all_colors[:,i]]))
+  print mat2str(hstack([ array([xdata]).T , all_evalues[:,i], all_colors[:,i]]))
                         
