@@ -381,7 +381,7 @@ class calculation(loggable):
       self.supercell_repetitions = self.name.split()[1].split('x')
       self.supercell_repetitions = [int(i) for i in self.supercell_repetitions]
     
-  def save_to_poscar(self, filename):
+  def save_to_poscar(self, filename,direct=False):
     """
     Save the system to POSCAR
     """ 
@@ -391,8 +391,12 @@ class calculation(loggable):
     F.write( mat2str( self.unit_cell, "%16.10f" ) )
     F.write(' '.join(self.species) )
     F.write('\n')
-    F.write("Cart\n")
-    F.write( mat2str( self.atoms, "%16.10f" ) )
+    if not direct:
+      F.write("Cart\n")
+      F.write( mat2str( self.atoms, "%16.10f" ) )
+    else:
+      F.write("Direct\n")
+      F.write( mat2str( dot(self.atoms,self.recip_cell), "%16.10f" ) )
     F.close()
 
   def save_to_xyz(self, filename, species = None):
