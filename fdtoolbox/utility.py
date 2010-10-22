@@ -230,7 +230,7 @@ def safe_inv(matrix, threshold = 0, iterate_components = None):
   (ee,vv) = linalg.eig( (matrix+matrix.T)/2. )
   vv=mat(vv)
 
-  s_ee = sorted(ee)
+  s_ee = sorted(abs(ee))
   if threshold < 0:
     threshold = (s_ee[-threshold-1]+s_ee[-threshold])/2.
 
