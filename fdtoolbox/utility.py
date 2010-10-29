@@ -227,7 +227,7 @@ def safe_inv(matrix, threshold = 0, iterate_components = None):
   In a lot of places we need to safely invert a (almost) Hermitian matrix. This is the way 
   we want to do that: by symmetrizing the matrix and skipping eigenvalues close to 0,   
   """
-  (ee,vv) = linalg.eig( (matrix+matrix.T)/2. )
+  (ee,vv) = linalg.eig( matrix )
   vv=mat(vv)
 
   s_ee = sorted(abs(ee))
@@ -246,15 +246,15 @@ def safe_inv(matrix, threshold = 0, iterate_components = None):
     else:
       new_ee[i]=1./ee[i]
 
-  return vv*mat(diag(new_ee))*vv.T, skipcount
+  return vv*mat(diag(new_ee))*vv.T, skipcount, ee
 
 def invert_with_warning(matrix, threshold, warning_msg, expected_skip):
-  inv_m, skip = safe_inv(matrix, threshold)
+  inv_m, skip, ee = safe_inv(matrix, threshold)
   if skip != expected_skip:
     loggable.debug(warning_msg % skip, LOG_WARNING)
-    loggable.debug('Near-zero threshold was: %f'%threshold, LOG_ALLINFO)
+    loggable.debug('Near-zero threshold was: %10.6f'%threshold, LOG_ALLINFO)
     loggable.debug('Eigenvalues of the matrix were:', LOG_ALLINFO)
-    loggable.debug(mat2str( linalg.eig((matrix+matrix.T)/2.)[0]), LOG_ALLINFO)
+    loggable.debug(mat2str( linalg.eig((matrix+matrix.T)/2.)[0], '%10.6f'), LOG_ALLINFO)
   
   return inv_m                 
     
@@ -268,3 +268,17 @@ def argvtospecies( argv ):
       species.extend( int(ns[0])*[ns[1]] )
   return species
 
+def add_common_options(parser):
+  parser.add_option("-t", "--translational", action='store', type='string', dest='trans', help="Threshold for translational (accoustic) modes used when inverting force constant matrix (eV/angstroem**2).", metavar="VAL")
+  parser.add_option("-r", "--rotaational", action='store', type='string', dest='rotat', help="Threshold for rotational modes used when inverting elastic constant matrix (GPa).", metavar="VAL")
+  parser.add_option("-R", "--nocache", action='store_true', dest='nocache', default=False, help="Reread the data and overwrite '_pickled.dat' cache file.")
+  parser.add_option("-a", "--asr", action='store_true', dest='asr', default=False, help="Force acoustic sum rule on the FC matrix.")
+
+def set_common_options(cs, lin_exp, options): 
+  if options.trans is not None:
+    cs.TRANSLATIONAL_MODE_THRESHOLD = float(options.trans)/cs.groundstate.volume
+    
+  if options.rotat is not None:
+    cs.ROTATIONAL_MODE_THRESHOLD = float(options.rotat)/EVA3_TO_GPA
+    
+  lin_exp.force_asr = options.asr 

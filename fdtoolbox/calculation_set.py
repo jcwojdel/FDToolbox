@@ -614,8 +614,11 @@ class calculation_set(loggable):
   MAX_DISPLACEMENT = 0.1
   MAX_POLARIZATION_SHIFT = 0.1
 
-  # Threshold used to recognize translational modes
+  # Threshold used to recognize translational modes of force constant matrix
   TRANSLATIONAL_MODE_THRESHOLD = 0.001
+  
+  # Threshold used to recognize rotational modes of elastic constant matrix
+  ROTATIONAL_MODE_THRESHOLD = 0.001
 
   # The stiffness of the constraint on lattice distortions used in add_lattice_constraint()
   # and ionic distortions in me_coupling. 

@@ -4,6 +4,7 @@ from fdtoolbox.calculation_set import *
 class linear_expansion(loggable):
   def __init__(self, calcset):
     self.symmetrize = True
+    self.force_asr = False
     self.calcset = calcset
     
   def calculate_expansion_coefficients(self, update_from_calcset=True):
@@ -20,6 +21,15 @@ class linear_expansion(loggable):
       if self.symmetrize:
         self.B_m_n     = 0.5*( self.B_m_n + self.B_m_n.T )
         self.B_j_k     = 0.5*( self.B_j_k + self.B_j_k.T )
+        
+      if self.force_asr:
+        for i in range(0,self.B_m_n.shape[0],3):
+          asr = zeros([3,3])
+          for j in range(0,self.B_m_n.shape[0],3):      
+            asr += self.B_m_n[i:i+3,j:j+3]
+      
+          self.B_m_n[i:i+3,i:i+3] -= asr
+        
   
   
       self.B_m_alpha = -self.calcset.electric_polarization_matrix('ion')[0]
@@ -37,7 +47,7 @@ class linear_expansion(loggable):
     self.Bhat_alpha_j    = self.B_alpha_j    -    dot(self.B_m_j.T,     dot(inv_B_m_n, self.B_m_alpha) )
     self.Bhat_mu_j       = self.B_mu_j       -    dot(self.B_m_j.T,     dot(inv_B_m_n, self.B_m_mu) )
 
-    inv_B_j_k = invert_with_warning(self.Bhat_j_k, self.calcset.TRANSLATIONAL_MODE_THRESHOLD,
+    inv_B_j_k = invert_with_warning(self.Bhat_j_k, self.calcset.ROTATIONAL_MODE_THRESHOLD,
                                     'Inverting elastic constant matrix resulted in %d soft modes', 3)      
     
     self.Bgot_alpha_beta = self.Bhat_alpha_beta -    dot(self.Bhat_alpha_j.T, dot(inv_B_j_k, self.Bhat_alpha_j) )
@@ -59,11 +69,11 @@ class linear_expansion(loggable):
     
   def piezoelectric_strain_tensor(self, ionic=True):
     if ionic is True:
-      sjk = invert_with_warning(self.Bhat_j_k, self.calcset.TRANSLATIONAL_MODE_THRESHOLD,
+      sjk = invert_with_warning(self.Bhat_j_k, self.calcset.ROTATIONAL_MODE_THRESHOLD,
                               'Inverting elastic constant matrix resulted in %d soft modes', 3)      
       eaj= self.Bhat_alpha_j
     else:
-      sjk = invert_with_warning(self.B_j_k, self.calcset.TRANSLATIONAL_MODE_THRESHOLD,
+      sjk = invert_with_warning(self.B_j_k, self.calcset.ROTATIONAL_MODE_THRESHOLD,
                               'Inverting elastic constant matrix resulted in %d soft modes', 3)      
       eaj= self.B_alpha_j
       
@@ -79,11 +89,11 @@ class linear_expansion(loggable):
     
   def piezomagnetic_strain_tensor(self, ionic=True):
     if ionic is True:
-      sjk = invert_with_warning(self.Bhat_j_k, self.calcset.TRANSLATIONAL_MODE_THRESHOLD,
+      sjk = invert_with_warning(self.Bhat_j_k, self.calcset.ROTATIONAL_MODE_THRESHOLD,
                                 'Inverting elastic constant matrix resulted in %d soft modes', 3)    
       mmj = self.Bhat_mu_j
     else:
-      sjk = invert_with_warning(self.B_j_k, self.calcset.TRANSLATIONAL_MODE_THRESHOLD,
+      sjk = invert_with_warning(self.B_j_k, self.calcset.ROTATIONAL_MODE_THRESHOLD,
                                 'Inverting elastic constant matrix resulted in %d soft modes', 3)    
       mmj = self.B_mu_j
        
@@ -98,7 +108,7 @@ class linear_expansion(loggable):
     
   def compliance_tensor(self, ionic=True):
     cjk = self.elastic_tensor(ionic)[0]
-    sjk = invert_with_warning(cjk, self.calcset.TRANSLATIONAL_MODE_THRESHOLD*EVA3_TO_GPA,
+    sjk = invert_with_warning(cjk, self.calcset.ROTATIONAL_MODE_THRESHOLD*EVA3_TO_GPA,
                               'Inverting elastic constant matrix resulted in %d soft modes', 3)
     return 1000*sjk, "TPa**-1"  
   
