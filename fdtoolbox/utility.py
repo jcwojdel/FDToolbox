@@ -115,27 +115,6 @@ def tensor2voigt( tens, transform_directions = [[1,2]] ):
   else:
     return a    
 
-def iterate_all_indices(shape,shape_min=None):
-  """
-  Generator function for looping through all possible combinations of the values in given ranges.
-  """
-  if shape_min is None:
-    shape_min = [0]*len(shape)
-
-  for i in range(int(shape_min[0]),int(shape[0])):
-    if len(shape) > 1:
-      for k in iterate_all_indices(shape[1:], shape_min[1:]):
-        yield [i]+k
-    else:
-      yield [i]    
-
-def iterate_shifts():
-  """
-  Generator function for iterating over all neighbours of 3D cube.
-  """
-  for dx,dy,dz in iterate_all_indices([3,3,3]):
-    yield (dx-1,dy-1,dz-1)
-  
 def rotatetensor(tens, rot):
   """
   Rotate (general - matrix) third-rank tensor. 
