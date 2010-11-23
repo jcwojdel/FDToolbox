@@ -3,7 +3,7 @@ from numpy import *
 
 from fdtoolbox.utility import *
 from fdtoolbox.atomic.atomic_set import atomic_set
-from fdtoolbox.atomic.utility import mat2str
+from fdtoolbox.atomic.utility import *
 
 import os
 import atexit
