@@ -2,6 +2,7 @@ from numpy import *
 
 
 from fdtoolbox.utility import *
+from fdtoolbox.atomic_set import atomic_set
 
 import os
 import atexit
@@ -12,7 +13,7 @@ try:
 except:
   have_gzip = False
 
-class calculation(loggable):
+class calculation(atomic_set):
   """
   A class for keeping all data read from OUTCAR for a single calculation. It reads the following
   properties of the calculation and stores them in the following attributes:
@@ -21,7 +22,7 @@ class calculation(loggable):
   - self.volume - volume calculated from the unit cell (1 A**3)
   - self.energy - total energy reported by VASP (1 eV)
   - self.name - name of the system as put in POSCAR
-  - self.species - list of species numbers 
+  - self.num_per_type - list of species numbers 
   - self.num_atoms - number of atoms
   - self.atoms - atomic positions internal coordinates (self.num_atomsx3 1)
   - self.forces - forces acting on ions as energy per internal coordinate derivative (self.num_atomsx3 eV)
@@ -32,12 +33,6 @@ class calculation(loggable):
   """
 
   saxis = [ 0., 0., 1. ]
-  
-  def get__volume(self):
-    if not hasattr(self,'__volume'):
-      self.__volume = linalg.det(self.unit_cell)
-    return self.__volume    
-  volume = property( get__volume, None )
   
   def load_polarization(self, filename):
     """
@@ -55,7 +50,7 @@ class calculation(loggable):
     self.berry_phase=3*[None]
     self.berry_ev=3*[None]
     self.berry_ion=3*[None]
-    self.species = []
+    self.num_per_type = []
     for kdirection in range(1,4):
       fname = ''.join( [ filename, '_berry_%d' % kdirection ] )
       if os.access( fname, os.R_OK ):
@@ -180,6 +175,8 @@ class calculation(loggable):
     else:
       raise Exception("Missing file")
       self.debug('Could not read %s' % filename, LOG_ERROR)
+      
+    self._temporary_species = []
     
     line=" "
     while line:
@@ -269,7 +266,11 @@ class calculation(loggable):
         self.name = line[line.find("=")+1:]
       elif line.startswith("   ions per type ="):
         # Ionic species information
-        self.species = line.split()[4:]
+        self.num_per_type = [int(v) for v in line.split()[4:]]
+        # By this time we already know the species:
+        self.species=[]
+        for i,n in enumerate(self.num_per_type):
+          self.species.extend(n*[self._temporary_species[i]])
       elif line.startswith("   ZVAL   ="):
         # Effective Z of each nuclei
         # Note that it might be multiline 
@@ -279,7 +280,7 @@ class calculation(loggable):
           line = F.readline()
           
         self.zvals = []
-        for num,sp in enumerate(self.species):
+        for num,sp in enumerate(self.num_per_type):
           self.zvals.extend(int(sp)*[float(data[num])])
       elif line.startswith("   POMASS =") and line.count('ZVAL') == 0:
         # Atomic mass of each nuclei
@@ -290,9 +291,11 @@ class calculation(loggable):
           line = F.readline()
           
         self.pomass = []
-        for num,sp in enumerate(self.species):
+        for num,sp in enumerate(self.num_per_type):
           self.pomass.extend(int(sp)*[float(data[num])])
-                
+      elif line.startswith("   VRHFIN"):
+        self._temporary_species.append(re.search('=(.+):',line).group(1))
+        # this will be expanded when we know how many atoms per specie we have        
       elif line.startswith(" total charge "):
         F.readline()
         F.readline()
@@ -353,164 +356,10 @@ class calculation(loggable):
     """
     Loads the system from POSCAR. Obviously, everything except for atomic positions is missing.
     """
-    F = open( filename, 'r' )
-    self.fileID = filename
-    self.name = F.readline()
-    scale = float(F.readline())
-    self.unit_cell = scale*mat( fromfile( F, dtype('float'), 9, ' ' ).reshape((3,3)) )
-    
-    self.species = F.readline().split()
-    self.num_atoms = 0
-    for i in self.species:
-      self.num_atoms += int(i)
-        
-    mode = F.readline()
-  
-    self.atoms = mat(fromfile( F, dtype('float'),  self.num_atoms*3, ' ' ).reshape(( self.num_atoms,3)))
+    atomic_set.load_from_poscar(self, filename)
     self.forces = zeros(self.atoms.shape)
-  
-    if re.search('^[cCkK]',mode):
-      pass
-    else:
-      self.atoms = self.atoms*self.unit_cell
-  
-    F.close()
-    
-    if self.name.split()[0] == "SUPERCELL":
-      self.is_supercell = True
-      self.supercell_repetitions = self.name.split()[1].split('x')
-      self.supercell_repetitions = [int(i) for i in self.supercell_repetitions]
-    
-  def save_to_poscar(self, filename,direct=False):
-    """
-    Save the system to POSCAR
-    """ 
-    F = open( filename, 'w' )
-    F.write( self.name )
-    F.write( "    1.0\n" )
-    F.write( mat2str( self.unit_cell, "%16.10f" ) )
-    F.write(' '.join(self.species) )
-    F.write('\n')
-    if not direct:
-      F.write("Cart\n")
-      F.write( mat2str( self.atoms, "%16.10f" ) )
-    else:
-      F.write("Direct\n")
-      F.write( mat2str( dot(self.atoms,self.recip_cell), "%16.10f" ) )
-    F.close()
-
-  def save_to_xyz(self, filename, species = None):
-    """
-    Save the system to XYZ
-    """ 
-    F = open( filename, 'a' )
-    F.write( '%d\n'%self.num_atoms )
-    F.write( "XYZ\n" )
-    for num,row in enumerate(self.atoms):
-      if species is not None:
-        F.write('%s  '%species[num])
-      else:
-        F.write('X%d  '%num)
-      F.write( mat2str( row, "%16.10f" ) )
-    F.write( "\n" )
-    F.close()
-    
-  def save_to_arc(self, filename, species = None, header = True, comment = None):
-    """
-    Save the system in ARC file
-    """
-    if header:
-      F = open( filename, 'w' )
-      F.write( "!BIOSYM archive 2\n" )
-      if comment is not None:
-        F.write( '!%s\n'%comment )
-      F.write( "PBC=ON\n" )
-    else:
-      F = open( filename, 'a' )
-
-    if species is None:
-      # Prepare a list of species in the calculation if none specified
-      # ARC does not allow for dummy atoms, so we fill everything with carbon
-      species=self.num_atoms*['C']
-            
-    #FIXME: If you think this is the ugliest python code you've ever seen,
-    # you are quite right! It is literal translation of some old AWK script.
-    # But it works for now, so... 
-
-    unit_cell = self.unit_cell
-    a=sqrt(unit_cell[0,0]*unit_cell[0,0]+
-         unit_cell[0,1]*unit_cell[0,1]+
-         unit_cell[0,2]*unit_cell[0,2])
-    b=sqrt(unit_cell[1,0]*unit_cell[1,0]+
-         unit_cell[1,1]*unit_cell[1,1]+
-         unit_cell[1,2]*unit_cell[1,2])
-    c=sqrt(unit_cell[2,0]*unit_cell[2,0]+
-         unit_cell[2,1]*unit_cell[2,1]+
-         unit_cell[2,2]*unit_cell[2,2])
-    alpha=(unit_cell[1,0]*unit_cell[2,0]+
-         unit_cell[1,1]*unit_cell[2,1]+
-         unit_cell[1,2]*unit_cell[2,2])/(b*c)
-    beta =(unit_cell[0,0]*unit_cell[2,0]+
-         unit_cell[0,1]*unit_cell[2,1]+
-         unit_cell[0,2]*unit_cell[2,2])/(a*c)
-    gamma=(unit_cell[0,0]*unit_cell[1,0]+
-         unit_cell[0,1]*unit_cell[1,1]+
-         unit_cell[0,2]*unit_cell[1,2])/(a*b)
-    alpha=math.atan2(sqrt(1-alpha*alpha),alpha)
-    beta =math.atan2(sqrt(1-beta *beta ),beta )
-    gamma=math.atan2(sqrt(1-gamma*gamma),gamma)
-
-    transf=zeros((3,3))
-    transf[0,0]=a
-    transf[1,0]=0.0
-    transf[2,0]=0.0
-    transf[0,1]=b*cos(gamma)
-    transf[1,1]=b*sin(gamma)
-    transf[2,1]=0.0
-    transf[0,2]=c*cos(beta)
-    transf[1,2]=c*(cos(alpha)-(cos(gamma)*cos(beta)))/sin(gamma)
-    transf[2,2]=sqrt(c*c-transf[0,2]*transf[0,2]-transf[1,2]*transf[1,2])
-
-    alpha=180*alpha/pi
-    beta =180* beta/pi
-    gamma=180*gamma/pi
-
-    recip_cell = self.recip_cell.T
-    frac_pos = zeros(self.atoms.shape)
-    positions= zeros(self.atoms.shape)
-    for i in range(self.num_atoms):
-      for j in range(3):
-        frac_pos[i,j]=0.
-        for k in range(3):
-          frac_pos[i,j]+=self.atoms[i,k]*recip_cell[j,k]
-      for j in range(3):
-        positions[i,j] = 0.
-        for k in range(3):
-          positions[i,j]+=frac_pos[i,k]*transf[j,k]
-
-    try:
-      F.write( '%80.6f\n'%self.energy )
-    except:
-      F.write( '\n' )
-    F.write( '!DATE\n' )
-    F.write( 'PBC   %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\n'%( a, b, c, alpha, beta, gamma ) )
-    
-    for i in range(self.num_atoms):
-      F.write( '%2s %-13.9f  %-13.9f  %-13.9f CORE %4d %2s %2s %6.4f %4d\n'%(
-           species[i], positions[i,0], positions[i,1], positions[i,2],i,
-           species[i], species[i], 0, i ) )
-    F.write( 'end\n' )
-    F.write( 'end\n' )
-
-    
-    
-    
-  def position(self):
-    """
-    Return atomic positions flattened to a single long vector.
-    """
-    return self.atoms.reshape((1,-1))
-  
+    self.energy = 0
+          
   def force(self, mode = 'ion'):
     """
     Return forces acting on 'ion's, 'lat'tice, or 'all' of them, flattened to one long vector.
@@ -538,60 +387,7 @@ class calculation(loggable):
     else:
       return None
     
-    
-  def supercell(self, shape):
-    """
-    Generate a supercell of the given shape
-    """
-    l,m,n = shape
-    mult = l*m*n
-
-    supercell = calculation()
-
-    supercell.name = "SUPERCELL %dx%dx%d %s"%(l,m,n,self.name)
-    supercell.unit_cell = multiply(self.unit_cell,array([[l,l,l],[m,m,m],[n,n,n]]))
-    supercell.recip_cell = linalg.inv(supercell.unit_cell)
-    supercell.num_atoms = mult*self.num_atoms
-    supercell.species=["%d"%(mult*int(s)) for s in self.species]
-
-    supercell.atoms = []
- 
-    for atom in array(self.atoms):
-      for displ in iterate_all_indices([l,m,n]):
-        supercell.atoms.append( atom + dot( array(displ), array(self.unit_cell) ) )
-
-    supercell.atoms = mat(supercell.atoms)
-
-    return supercell
   
-  @property
-  def recip_cell(self):
-    return self.unit_cell.I
-
-  @property
-  def cell_a(self):
-    return linalg.norm(self.unit_cell[0,:])
-
-  @property
-  def cell_b(self):
-    return linalg.norm(self.unit_cell[1,:])
-
-  @property
-  def cell_c(self):
-    return linalg.norm(self.unit_cell[2,:])
-  
-  @property
-  def cell_alpha(self, unit_conv=180./pi):
-    return unit_conv*arccos(dot(self.unit_cell[1,:],self.unit_cell[2,:].T)[0,0]/(self.cell_b*self.cell_c))
-
-  @property
-  def cell_beta(self, unit_conv=180./pi):
-    return unit_conv*arccos(dot(self.unit_cell[0,:],self.unit_cell[2,:].T)[0,0]/(self.cell_a*self.cell_c))
-
-  @property
-  def cell_gamma(self, unit_conv=180./pi):
-    return unit_conv*arccos(dot(self.unit_cell[0,:],self.unit_cell[1,:].T)[0,0]/(self.cell_a*self.cell_b))
-
 class calculation_set(loggable):
   """
   A class representing a full set of calculations read from multiple subdirectories.

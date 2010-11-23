@@ -45,9 +45,9 @@ shape_max = vstack( [ array( abs(transformation).sum(0)), array(transformation.m
 shape_min = vstack( [ array(-abs(transformation).sum(0)), array(transformation.min(0)), [0,0,0] ]).min(0)
 
 newcell.atoms = []
-newcell.species = []
+newcell.num_per_type = []
 cur_s = 0
-for s_count in cell.species:
+for s_count in cell.num_per_type:
   s_count = int(s_count)
   appended_s = 0
   for atom in range( cur_s, cur_s + s_count):

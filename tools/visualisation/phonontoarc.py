@@ -54,11 +54,8 @@ if mode_num < 0:
 
 eigmode = (linalg.eig(lin_exp.B_m_n)[1])[:,mode_num]
 
-if species is None:
-  species = cs.groundstate.num_atoms*["C"]
-
-cs.groundstate.save_to_arc("/dev/stdout", species, True, 'Eigenmode number %d with eigenvalue %f'%(mode_num,cs.groundstate.volume*eigstruct[0][mode_num]))
+cs.groundstate.save_to_arc("/dev/stdout", True, 'Eigenmode number %d with eigenvalue %f'%(mode_num,cs.groundstate.volume*eigstruct[0][mode_num]))
 for i in range(30):
   cs.groundstate.atoms += cos(2*pi*i/30.)/5.*eigmode.reshape((cs.groundstate.num_atoms,3)) 
-  cs.groundstate.save_to_arc("/dev/stdout", species, False)
+  cs.groundstate.save_to_arc("/dev/stdout", False)
   
