@@ -153,7 +153,7 @@ class calculation(atomic_set):
     """    
     # Gather data from all three directions
 
-    self.polarization = [self.berry_term()*self.unit_cell] + mean(self.ionic_term(),axis=0) + mean(self.berry_ev,axis=0)
+    self.polarization = self.berry_term()*self.unit_cell + mean(self.ionic_term(),axis=0) + mean(self.berry_ev,axis=0)
 
     # Note that VASP reports data in 'electrons * A', meaning the lack of minus sign
     # and not scaling by cell volume.
