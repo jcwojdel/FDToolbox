@@ -167,7 +167,7 @@ reading from all its subdirectories (with the notable exception of tools/calcinf
 The programs calculating magnetic properties take as the second parameter the SAXIS orientation noted as 
 "X/Y/Z" for example:
 
-$ me_coupling.py BiFeO3_100 1/0/0
+$ mecoupling.py BiFeO3_100 1/0/0
 
 As reading of the OUTCARs takes most processing time, all programs will try to first use already cached 
 data from DIRECTORYNAME_pickled.dat file. In this manner, only first of the run programs will actually 
@@ -185,16 +185,16 @@ ZnO/calc_00_0/OUTCAR_berry_1
 (...)
 
 $ elastic.py ZnO
-Reading from directory: ZnO                                  
-Using cache: True                                            
-Reading calculation from ZnO/calc_00_0/OUTCAR                
-No magnetization available                                   
-Reading calculation from ZnO/calc_00_a-X/OUTCAR              
-Reading calculation from ZnO/calc_00_a+X/OUTCAR              
-Reading calculation from ZnO/calc_00_a-Y/OUTCAR              
+Reading from directory: ZnO
+Using cache: True
+II: Reading calculation from ZnO/calc_00_a-Y/OUTCAR
+WW: No magnetization available
+II: Reading calculation from ZnO/calc_00_b-X/OUTCAR
+II: Reading calculation from ZnO/calc_00_c+Y/OUTCAR
+II: Reading calculation from ZnO/calc_04_-1/OUTCAR
 (...)
-Force constant matrix eigenvalues (eV Andstrom**-2  )        
- -21.4798  -17.4711  -17.4322  -16.1557  -16.1137  -14.6069  -13.8063  -1.3609  -1.3163  -0.0001   0.0000   0.0001                                                                                                  
+Force constant matrix eigenvalues (eV Andstrom**-2  )
+ -0.0001  -0.0000   0.0001   1.3163   1.3609   13.8063   14.6069   16.1137   16.1557   17.4322   17.4711   21.4798
 
 Clamped-ion elastic constant matrix in Voigt notation (GPa)
     303.2444     103.0292      73.5406       0.0000       0.0000       2.0713
@@ -245,7 +245,6 @@ invariance might be lost.
 
 FDToolbox provides several additional utilities in tools directory:
 
-- generate_phonon.py - can be used to generate an ARC file with animation of a specific phonon
 - calcinfo.py - prints out information about magnetization (in real space, taking care of SAXIS rotation)
   and polarization from a single calculation, or a set of calculations (in the later case, calculations
   are treated as a chain of slowly changing geometries for which the polarisations are calculated 
