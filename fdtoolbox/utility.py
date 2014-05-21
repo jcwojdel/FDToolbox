@@ -1,4 +1,5 @@
 from numpy import *
+from atomic.utility import iterate_all_indices, mat2str, loggable, LOG_ALLINFO, LOG_WARNING
   
 import copy
 
@@ -207,7 +208,7 @@ def argvtospecies( argv ):
 
 def add_common_options(parser):
   parser.add_option("-t", "--translational", action='store', type='string', dest='trans', help="Threshold for translational (accoustic) modes used when inverting force constant matrix (eV/angstroem**2).", metavar="VAL")
-  parser.add_option("-r", "--rotaational", action='store', type='string', dest='rotat', help="Threshold for rotational modes used when inverting elastic constant matrix (GPa).", metavar="VAL")
+  parser.add_option("-r", "--rotational", action='store', type='string', dest='rotat', help="Threshold for rotational modes used when inverting elastic constant matrix (GPa).", metavar="VAL")
   parser.add_option("-R", "--nocache", action='store_true', dest='nocache', default=False, help="Reread the data and overwrite '_pickled.dat' cache file.")
   parser.add_option("-a", "--asr", action='store_true', dest='asr', default=False, help="Force acoustic sum rule on the FC matrix.")
 

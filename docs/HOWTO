@@ -269,12 +269,4 @@ can be done by quick hacks to the code. See the following examples located in to
 - follow_phonons.py - shows how to read several calculations and later aling the calculated phonons 
   based on their similarity, so that a graph presenting chcnges in phonons is obtained 
   
-7. METOOLBOX INTERNAL WORKINGS
-
-TO BE WRITTEN...
-   
-
-
-
-
      

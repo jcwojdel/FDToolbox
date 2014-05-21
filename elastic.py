@@ -12,7 +12,7 @@ except:
   directory = "."
 
 try:
-  usecache = argv[2] != 'nocache'
+  usecache = sys.argv[2] != 'nocache'
 except:
   usecache = True
   

@@ -17,7 +17,7 @@ except:
   saxis = [0., 0., 1.]
 
 try:
-  usecache = argv[3] != 'nocache'
+  usecache = sys.argv[3] != 'nocache'
 except:
   usecache = True
   
